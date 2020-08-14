@@ -1,3 +1,4 @@
+//
 /*
  * Copyright 2020 ZUP IT SERVICOS EM TECNOLOGIA E INOVACAO SA
  *
@@ -14,19 +15,19 @@
  * limitations under the License.
  */
 
+import Foundation
 import UIKit
+import BeagleSchema
 
-public struct FormInputHidden: FormInputComponent, AutoInitiable {
-    public let name: String
-    public let value: String
-
-// sourcery:inline:auto:FormInputHidden.Init
-    public init(
-        name: String,
-        value: String
-    ) {
-        self.name = name
-        self.value = value
+extension SimpleForm: Widget {
+    
+    public func toView(renderer: BeagleRenderer) -> UIView {
+        let simpleForm = UIView()
+        simpleForm.beagleFormElement = self
+        children.forEach {
+            let view = renderer.render($0)
+            simpleForm.addSubview(view)
+        }
+        return simpleForm
     }
-// sourcery:end
 }

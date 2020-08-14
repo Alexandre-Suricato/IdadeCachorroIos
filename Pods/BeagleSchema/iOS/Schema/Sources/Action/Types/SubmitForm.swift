@@ -1,3 +1,4 @@
+//
 /*
  * Copyright 2020 ZUP IT SERVICOS EM TECNOLOGIA E INOVACAO SA
  *
@@ -15,20 +16,6 @@
  */
 
 import Foundation
-import UIKit    
-
-public class PageIndicator: PageIndicatorComponent, AutoInitiable {
-
-    public var selectedColor: String?
-    public var unselectedColor: String?
-
-// sourcery:inline:auto:PageIndicator.Init
-    public init(
-        selectedColor: String? = nil,
-        unselectedColor: String? = nil
-    ) {
-        self.selectedColor = selectedColor
-        self.unselectedColor = unselectedColor
-    }
-// sourcery:end
+public struct SubmitForm: RawAction {
+    public init() {}
 }

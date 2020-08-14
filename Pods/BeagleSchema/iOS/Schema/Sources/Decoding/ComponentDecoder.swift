@@ -19,8 +19,12 @@ import Foundation
 public protocol ComponentDecoding {
     typealias Error = ComponentDecodingError
     
-    func register<T: RawComponent>(_ type: T.Type, for typeName: String)
-    func register<A: RawAction>(_ type: A.Type, for typeName: String)
+    func register<T: RawComponent>(component type: T.Type)
+    func register<A: RawAction>(action type: A.Type)
+    
+    func register<T: RawComponent>(component type: T.Type, named: String)
+    func register<A: RawAction>(action type: A.Type, named: String)
+    
     func componentType(forType type: String) -> Decodable.Type?
     func actionType(forType type: String) -> Decodable.Type?
     func decodeComponent(from data: Data) throws -> RawComponent
@@ -51,12 +55,24 @@ final public class ComponentDecoder: ComponentDecoding {
         registerDefaultTypes()
     }
     
-    public func register<T: RawComponent>(_ type: T.Type, for typeName: String) {
-        registerComponent(type, key: key(name: typeName, namespace: .custom))
+    // MARK: - ComponentDecoding
+    
+    public func register<T: RawComponent>(component type: T.Type) {
+        let componentTypeName = String(describing: T.self)
+        registerComponent(type, key: key(name: componentTypeName, namespace: .custom))
     }
     
-    public func register<A: RawAction>(_ type: A.Type, for typeName: String) {
-        registerAction(type, key: key(name: typeName, namespace: .custom))
+    public func register<A: RawAction>(action type: A.Type) {
+        let actionTypeName = String(describing: A.self)
+        registerAction(type, key: key(name: actionTypeName, namespace: .custom))
+    }
+    
+    public func register<T: RawComponent>(component type: T.Type, named: String) {
+        registerComponent(type, key: key(name: named, namespace: .custom))
+    }
+    
+    public func register<A: RawAction>(action type: A.Type, named: String) {
+        registerAction(type, key: key(name: named, namespace: .custom))
     }
     
     public func componentType(forType type: String) -> Decodable.Type? {
@@ -131,6 +147,7 @@ final public class ComponentDecoder: ComponentDecoding {
         registerAction(SendRequest.self, key: key(name: "SendRequest", namespace: .beagle))
         registerAction(Alert.self, key: key(name: "Alert", namespace: .beagle))
         registerAction(Confirm.self, key: key(name: "Confirm", namespace: .beagle))
+        registerAction(SubmitForm.self, key: key(name: "SubmitForm", namespace: .beagle))
     }
     
     private func registerCoreTypes() {
@@ -139,9 +156,10 @@ final public class ComponentDecoder: ComponentDecoding {
     }
     
     private func registerFormModels() {
-        registerComponent(Form.self, key: key(name: "Form", namespace: .beagle))
-        registerComponent(FormSubmit.self, key: key(name: "FormSubmit", namespace: .beagle))
-        registerComponent(FormInput.self, key: key(name: "FormInput", namespace: .beagle))
+        registerComponent(Deprecated.Form.self, key: key(name: "Form", namespace: .beagle))
+        registerComponent(Deprecated.FormSubmit.self, key: key(name: "FormSubmit", namespace: .beagle))
+        registerComponent(Deprecated.FormInput.self, key: key(name: "FormInput", namespace: .beagle))
+        registerComponent(SimpleForm.self, key: key(name: "SimpleForm", namespace: .beagle))
     }
     
     private func registerLayoutTypes() {
@@ -156,6 +174,7 @@ final public class ComponentDecoder: ComponentDecoding {
         registerComponent(Text.self, key: key(name: "Text", namespace: .beagle))
         registerComponent(PageView.self, key: key(name: "PageView", namespace: .beagle))
         registerComponent(TabView.self, key: key(name: "TabView", namespace: .beagle))
+        registerComponent(TabBar.self, key: key(name: "TabBar", namespace: .beagle))
         registerComponent(PageIndicator.self, key: key(name: "PageIndicator", namespace: .beagle))
         registerComponent(LazyComponent.self, key: key(name: "LazyComponent", namespace: .beagle))
         registerComponent(WebView.self, key: key(name: "WebView", namespace: .beagle))

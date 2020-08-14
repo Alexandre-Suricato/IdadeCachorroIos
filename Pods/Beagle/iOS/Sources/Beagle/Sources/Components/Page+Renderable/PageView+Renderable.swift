@@ -21,9 +21,7 @@ extension PageView: ServerDrivenComponent {
 
     public func toView(renderer: BeagleRenderer) -> UIView {
         let pagesControllers = children.map {
-            BeagleScreenViewController(
-                viewModel: .init(screenType: .declarative($0.toScreen()))
-            )
+            ComponentHostController($0, renderer: renderer)
         }
 
         var indicatorView: PageIndicatorUIView?
@@ -33,8 +31,21 @@ extension PageView: ServerDrivenComponent {
 
         let view = PageViewUIComponent(
             model: .init(pages: pagesControllers),
-            indicatorView: indicatorView
+            indicatorView: indicatorView,
+            controller: renderer.controller
         )
+        
+        if let actions = onPageChange {
+            view.onPageChange = { page in
+                renderer.controller.execute(actions: actions, with: "onPageChange", and: .int(page), origin: view)
+            }
+        }
+
+        renderer.observe(currentPage, andUpdateManyIn: view) { page in
+            if let page = page {
+                view.swipeToPage(at: page)
+            }
+        }
         
         view.style.setup(Style(flex: Flex(grow: 1.0)))
         return view

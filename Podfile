@@ -6,7 +6,7 @@ target 'IdadeCachorroIos' do
   use_frameworks!
 
   # Pods for IdadeCachorroIos
-  pod 'Beagle'
+  pod 'Beagle', '1.1.0'
   pod 'YogaKit', :git => 'https://github.com/ZupIT/YogaKit'
 
   target 'IdadeCachorroIosTests' do

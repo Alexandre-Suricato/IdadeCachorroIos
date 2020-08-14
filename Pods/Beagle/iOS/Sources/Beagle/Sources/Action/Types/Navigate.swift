@@ -16,9 +16,35 @@
  */
 
 import BeagleSchema
+import UIKit
 
 extension Navigate: Action {
-    public func execute(controller: BeagleController, sender: Any) {
+    public func execute(controller: BeagleController, origin: UIView) {
         controller.dependencies.navigation.navigate(action: self, controller: controller, animated: true)
+    }
+}
+
+extension Navigate {
+    var newPath: Route.NewPath? {
+        switch self {
+        case let .resetApplication(route),
+             let .resetStack(route),
+             let .pushStack(route),
+             let .pushView(route):
+            return route.path
+        default:
+            return nil
+        }
+    }
+}
+
+extension Route {
+    var path: NewPath? {
+        switch self {
+        case let .remote(newPath):
+            return newPath
+        case .declarative:
+            return nil
+        }
     }
 }

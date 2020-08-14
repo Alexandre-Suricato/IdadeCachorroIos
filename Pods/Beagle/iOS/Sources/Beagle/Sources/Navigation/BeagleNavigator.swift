@@ -35,6 +35,8 @@ class BeagleNavigator: BeagleNavigation {
     
     var defaultAnimation: BeagleNavigatorAnimation?
     
+    private typealias Transition = (BeagleController, UIViewController, Bool) -> Void
+    
     // MARK: - Navigate
     
     func navigate(action: Navigate, controller: BeagleController, animated: Bool = false) {
@@ -42,20 +44,20 @@ class BeagleNavigator: BeagleNavigation {
         switch action {
         case let .openExternalURL(url):
             openExternalURL(path: url, controller: controller)
-        case let .openNativeRoute(route, data, shouldResetApplication):
-            openNativeRoute(path: route, controller: controller, data: data, resetApplication: shouldResetApplication, animated: animated)
+        case let .openNativeRoute(nativeRoute):
+            openNativeRoute(controller: controller, animated: animated, nativeRoute: nativeRoute)
         case let .resetApplication(route):
-            resetApplication(with: route, controller: controller, animated: animated)
+            navigate(route: route, origin: controller, animated: animated, transition: resetApplication(origin:destination:animated:))
         case let .resetStack(route):
-            resetStack(with: route, controller: controller, animated: animated)
+            navigate(route: route, origin: controller, animated: animated, transition: resetStack(origin:destination:animated:))
         case let .pushView(route):
-            pushView(with: route, controller: controller, animated: animated)
+            navigate(route: route, origin: controller, animated: animated, transition: pushView(origin:destination:animated:))
         case .popView:
             popView(controller: controller, animated: animated)
         case let .popToView(route):
             popToView(identifier: route, controller: controller, animated: animated)
         case let .pushStack(route):
-            pushStack(with: route, controller: controller, animated: animated)
+            navigate(route: route, origin: controller, animated: animated, transition: pushStack(origin:destination:animated:))
         case .popStack:
             popStack(controller: controller, animated: animated)
         }
@@ -63,44 +65,57 @@ class BeagleNavigator: BeagleNavigation {
     
     // MARK: - Navigate Handle
     
+    private func navigate(route: Route, origin: BeagleController, animated: Bool, transition: @escaping Transition) {
+        viewController(
+            route: route,
+            origin: origin,
+            retry: { [weak origin] in
+                guard let origin = origin else { return }
+                self.navigate(route: route, origin: origin, animated: animated, transition: transition)
+            },
+            success: {
+                transition(origin, $0, animated)
+            }
+        )
+    }
+    
     private func openExternalURL(path: String, controller: BeagleController) {
         controller.dependencies.opener.tryToOpen(path: path)
     }
     
-    private func openNativeRoute(path: String, controller: BeagleController, data: [String: String]?, resetApplication: Bool, animated: Bool) {
-        
+    private func openNativeRoute(controller: BeagleController, animated: Bool, nativeRoute: Navigate.OpenNativeRoute) {
         do {
             guard let deepLinkHandler = controller.dependencies.deepLinkHandler else { return }
-            let viewController = try deepLinkHandler.getNativeScreen(with: path, data: data)
+            let viewController = try deepLinkHandler.getNativeScreen(with: nativeRoute.route, data: nativeRoute.data)
             
             if let transition = defaultAnimation?.getTransition(.push) {
                 controller.navigationController?.view.layer.add(transition, forKey: nil)
             }
             
-            if resetApplication {
+            if nativeRoute.shouldResetApplication {
                 controller.dependencies.windowManager.window?.replace(rootViewController: viewController, animated: animated, completion: nil)
             } else {
                 controller.navigationController?.pushViewController(viewController, animated: animated)
             }
         } catch {
-            controller.dependencies.logger.log(Log.navigation(.didNotFindDeepLinkScreen(path: path)))
+            controller.dependencies.logger.log(Log.navigation(.didNotFindDeepLinkScreen(path: nativeRoute.route)))
             return
         }
     }
     
-    private func resetApplication(with type: Route, controller: BeagleController, animated: Bool) {
-        controller.dependencies.windowManager.window?.replace(rootViewController: viewControllerToPresent(type), animated: animated, completion: nil)
+    private func resetApplication(origin: BeagleController, destination: UIViewController, animated: Bool) {
+        origin.dependencies.windowManager.window?.replace(rootViewController: destination, animated: animated, completion: nil)
     }
     
-    private func resetStack(with type: Route, controller: BeagleController, animated: Bool) {
-        controller.navigationController?.setViewControllers([viewControllerToPresent(type)], animated: animated)
+    private func resetStack(origin: BeagleController, destination: UIViewController, animated: Bool) {
+        origin.navigationController?.setViewControllers([destination], animated: animated)
     }
     
-    private func pushView(with type: Route, controller: BeagleController, animated: Bool) {
+    private func pushView(origin: BeagleController, destination: UIViewController, animated: Bool) {
         if let transition = defaultAnimation?.getTransition(.push) {
-            controller.navigationController?.view.layer.add(transition, forKey: nil)
+            origin.navigationController?.view.layer.add(transition, forKey: nil)
         }
-        controller.navigationController?.pushViewController(viewControllerToPresent(type), animated: animated)
+        origin.navigationController?.pushViewController(destination, animated: animated)
     }
     
     private func popView(controller: BeagleController, animated: Bool) {
@@ -132,14 +147,9 @@ class BeagleNavigator: BeagleNavigation {
         controller.navigationController?.popToViewController(target, animated: animated)
     }
     
-    private func pushStack(with type: Route, controller: BeagleController, animated: Bool) {
-        let navigationToPresent = controller.dependencies.navigationControllerType.init()
-        switch type {
-        case let .remote(route, _, fallback):
-            navigationToPresent.viewControllers = [viewController(route: route, fallback: fallback)]
-        case let .declarative(screen):
-            navigationToPresent.viewControllers = [viewController(screen: screen)]
-        }
+    private func pushStack(origin: BeagleController, destination: UIViewController, animated: Bool) {
+        let navigationToPresent = origin.dependencies.navigationControllerType.init()
+        navigationToPresent.viewControllers = [destination]
         
         if #available(iOS 13.0, *) {
             navigationToPresent.modalPresentationStyle = defaultAnimation?.modalPresentationStyle ?? .automatic
@@ -151,7 +161,7 @@ class BeagleNavigator: BeagleNavigation {
             navigationToPresent.modalTransitionStyle = defaultAnimation.modalTransitionStyle
         }
         
-        controller.present(navigationToPresent, animated: animated)
+        origin.present(navigationToPresent, animated: animated)
     }
     
     private func popStack(controller: UIViewController, animated: Bool) {
@@ -184,27 +194,42 @@ class BeagleNavigator: BeagleNavigation {
         return builder.build(path: path)?.absoluteString
     }
     
-    private func viewControllerToPresent(_ type: Route) -> UIViewController {
-        let viewControllerToPresent: UIViewController
-        switch type {
-        case let .remote(route, _, fallback): viewControllerToPresent = viewController(route: route, fallback: fallback)
-        case .declarative(let screen): viewControllerToPresent = viewController(screen: screen)
+    private func viewController(
+        route: Route,
+        origin: BeagleController,
+        retry: @escaping BeagleRetry,
+        success: @escaping (BeagleScreenViewController) -> Void
+    ) {
+        switch route {
+        case .remote(let newPath):
+            remote(path: newPath, origin: origin, retry: retry, success: success)
+        case .declarative(let screen):
+            success(BeagleScreenViewController(viewModel: .init(
+                screenType: .declarative(screen)
+            )))
         }
-        return viewControllerToPresent
     }
     
-    private func viewController(screen: Screen) -> UIViewController {
-        return BeagleScreenViewController(viewModel: .init(
-            screenType: .declarative(screen)
-            ))
-    }
-    
-    private func viewController(route: String, fallback: Screen?) -> UIViewController {
-        return BeagleScreenViewController(viewModel: .init(
-            screenType: .remote(.init(
-                url: route,
-                fallback: fallback
-                ))
-            ))
+    @discardableResult
+    private func remote(
+        path: Route.NewPath,
+        origin: BeagleController,
+        retry: @escaping BeagleRetry,
+        success: @escaping (BeagleScreenViewController) -> Void
+    ) -> RequestToken? {
+        
+        origin.serverDrivenState = .loading(true)
+        let remote = ScreenType.Remote(url: path.url, fallback: path.fallback, additionalData: nil)
+        
+        return BeagleScreenViewController.remote(remote, dependencies: origin.dependencies) {
+            [weak origin] result in guard let origin = origin else { return }
+            switch result {
+            case .success(let viewController):
+                origin.serverDrivenState = .loading(false)
+                success(viewController)
+            case .failure(let error):
+                origin.serverDrivenState = .error(.remoteScreen(error), retry)
+            }
+        }
     }
 }

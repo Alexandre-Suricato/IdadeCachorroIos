@@ -101,6 +101,22 @@ extension Container {
     }
 }
 
+// MARK: Context Decodable
+extension Context {
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case value
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(String.self, forKey: .id)
+        value = try container.decode(DynamicObject.self, forKey: .value)
+    }
+}
+
 // MARK: Form Decodable
 extension Form {
 
@@ -172,7 +188,7 @@ extension Image {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        path = try container.decode(Expression<PathType>.self, forKey: .path)
+        path = try container.decode(Expression<ImagePath>.self, forKey: .path)
         mode = try container.decodeIfPresent(ImageContentMode.self, forKey: .mode)
         widgetProperties = try WidgetProperties(from: decoder)
     }
@@ -217,6 +233,8 @@ extension PageView {
         case children
         case pageIndicator
         case context
+        case onPageChange
+        case currentPage
     }
 
     public init(from decoder: Decoder) throws {
@@ -226,6 +244,8 @@ extension PageView {
         let rawPageIndicator: RawComponent? = try container.decodeIfPresent(forKey: .pageIndicator)
         pageIndicator = rawPageIndicator as? PageIndicatorComponent
         context = try container.decodeIfPresent(Context.self, forKey: .context)
+        onPageChange = try container.decodeIfPresent(forKey: .onPageChange)
+        currentPage = try container.decodeIfPresent(Expression<Int>.self, forKey: .currentPage)
     }
 }
 
@@ -239,6 +259,7 @@ extension ScreenComponent {
         case navigationBar
         case screenAnalyticsEvent
         case child
+        case context
     }
 
     public init(from decoder: Decoder) throws {
@@ -250,6 +271,7 @@ extension ScreenComponent {
         navigationBar = try container.decodeIfPresent(NavigationBar.self, forKey: .navigationBar)
         screenAnalyticsEvent = try container.decodeIfPresent(AnalyticsScreen.self, forKey: .screenAnalyticsEvent)
         child = try container.decode(forKey: .child)
+        context = try container.decodeIfPresent(Context.self, forKey: .context)
     }
 }
 
@@ -296,6 +318,45 @@ extension SendRequest {
         onSuccess = try container.decodeIfPresent(forKey: .onSuccess)
         onError = try container.decodeIfPresent(forKey: .onError)
         onFinish = try container.decodeIfPresent(forKey: .onFinish)
+    }
+}
+
+// MARK: SimpleForm Decodable
+extension SimpleForm {
+
+    enum CodingKeys: String, CodingKey {
+        case context
+        case onSubmit
+        case children
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        context = try container.decodeIfPresent(Context.self, forKey: .context)
+        onSubmit = try container.decodeIfPresent(forKey: .onSubmit)
+        children = try container.decode(forKey: .children)
+        widgetProperties = try WidgetProperties(from: decoder)
+    }
+}
+
+// MARK: TabBar Decodable
+extension TabBar {
+
+    enum CodingKeys: String, CodingKey {
+        case items
+        case styleId
+        case currentTab
+        case onTabSelection
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        items = try container.decode([TabBarItem].self, forKey: .items)
+        styleId = try container.decodeIfPresent(String.self, forKey: .styleId)
+        currentTab = try container.decodeIfPresent(Expression<Int>.self, forKey: .currentTab)
+        onTabSelection = try container.decodeIfPresent(forKey: .onTabSelection)
     }
 }
 

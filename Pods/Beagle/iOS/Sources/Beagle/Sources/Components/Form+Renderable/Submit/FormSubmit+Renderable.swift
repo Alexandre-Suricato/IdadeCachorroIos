@@ -17,7 +17,7 @@
 import UIKit
 import BeagleSchema
 
-extension FormSubmit: ServerDrivenComponent {
+extension Deprecated.FormSubmit: ServerDrivenComponent {
     
     public func toView(renderer: BeagleRenderer) -> UIView {
         let childView = renderer.render(child)
@@ -29,7 +29,7 @@ extension FormSubmit: ServerDrivenComponent {
     
     final class FormSubmitView: UIView, Observer, WidgetStateObservable {
         
-        let childView: UIView
+        weak var childView: UIView?
         let observable: Observable<WidgetState>
         
         init(
@@ -47,7 +47,7 @@ extension FormSubmit: ServerDrivenComponent {
         }
         
         func didChangeValue(_ value: Any?) {
-            childView.gestureRecognizers?
+            childView?.gestureRecognizers?
                 .compactMap { $0 as? SubmitFormGestureRecognizer }
                 .forEach { $0.updateSubmitView() }
         }

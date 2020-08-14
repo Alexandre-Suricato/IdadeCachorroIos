@@ -14,23 +14,10 @@
  * limitations under the License.
  */
 
-public struct PageView: RawComponent, AutoInitiableAndDecodable, HasContext {
+import Foundation
 
-    public let children: [RawComponent]
-    public let pageIndicator: PageIndicatorComponent?
-    public let context: Context?
-
-// sourcery:inline:auto:PageView.Init
-    public init(
-        children: [RawComponent],
-        pageIndicator: PageIndicatorComponent? = nil,
-        context: Context? = nil
-    ) {
-        self.children = children
-        self.pageIndicator = pageIndicator
-        self.context = context
-    }
-// sourcery:end
+public enum Deprecated {
+    public typealias Form = BeagleSchema.Form
+    public typealias FormInput = BeagleSchema.FormInput
+    public typealias FormSubmit = BeagleSchema.FormSubmit
 }
-
-public protocol PageIndicatorComponent: RawComponent {}

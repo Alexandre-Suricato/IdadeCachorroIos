@@ -1,3 +1,4 @@
+//
 /*
  * Copyright 2020 ZUP IT SERVICOS EM TECNOLOGIA E INOVACAO SA
  *
@@ -14,21 +15,19 @@
  * limitations under the License.
  */
 
-import UIKit
+import Foundation
 import BeagleSchema
+import UIKit
 
-extension TabView: ServerDrivenComponent {
-
-    public func toView(renderer: BeagleRenderer) -> UIView {
-        let model = TabViewUIComponent.Model(tabIndex: 0, tabViewItems: children)
-        let tabView = TabViewUIComponent(model: model)
-
-        // TODO: use style in BeagleRenderer
-        if let styleId = styleId {
-            renderer.controller.dependencies.theme.applyStyle(for: tabView as UIView, withId: styleId)
+extension SubmitForm: Action {
+    public func execute(controller: BeagleController, origin: UIView) {
+        var view: UIView? = origin
+        while view != nil {
+            if let simpleForm = view?.beagleFormElement as? SimpleForm {
+                controller.execute(actions: simpleForm.onSubmit, origin: origin)
+                break
+            }
+            view = view?.superview
         }
-
-        tabView.style.setup(Style(size: Size().width(100%), flex: Flex().grow(1)))
-        return tabView
     }
 }
